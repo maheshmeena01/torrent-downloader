@@ -1,15 +1,20 @@
 # ==============================================================================
 # Universal PowerShell script with automatic prerequisite (aria2c) installation.
-# Version 2.0 - Fixed for one-liner execution.
+# Version 2.1 - Fixed the aria2c download URL.
 # ==============================================================================
 
 # --- Setup & Prerequisite Check ---
 
-# Define the root directory based on the user's current location. This is more reliable for one-liners.
+# Define the root directory based on the user's current location.
 $scriptRoot = Get-Location
 $toolsDir = Join-Path -Path $scriptRoot -ChildPath "tools"
 $aria2Path = Join-Path -Path $toolsDir -ChildPath "aria2c.exe"
-$aria2Version = "aria2-1.37.0" # Specify a known stable version
+
+# Define variables for the aria2c download.
+# This makes it easier to update when a new version is released.
+$aria2VersionNumber = "1.37.0"
+$aria2VersionName = "aria2-1.37.0"
+$aria2AssetName = "$($aria2VersionName)-win-64bit-build1.zip"
 
 # Check if aria2c.exe already exists in our local tools folder.
 if (-not (Test-Path -Path $aria2Path)) {
@@ -26,12 +31,13 @@ if (-not (Test-Path -Path $aria2Path)) {
             New-Item -ItemType Directory -Path $toolsDir | Out-Null
         }
 
-        # Define download URLs and paths
-        $downloadUrl = "https://github.com/aria2/aria2/releases/download/release-$($aria2Version)/$($aria2Version)-win-64bit-build1.zip"
+        # Construct the correct download URL.
+        $downloadUrl = "https://github.com/aria2/aria2/releases/download/release-$($aria2VersionNumber)/$($aria2AssetName)"
         $zipPath = Join-Path -Path $toolsDir -ChildPath "aria2.zip"
 
         # Download the file
         Write-Host "Downloading aria2 from the official GitHub repository..." -ForegroundColor Green
+        Write-Host "URL: $downloadUrl" # Added for debugging
         Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath
 
         # Unzip the file
@@ -39,7 +45,7 @@ if (-not (Test-Path -Path $aria2Path)) {
         Expand-Archive -Path $zipPath -DestinationPath $toolsDir -Force
 
         # The zip extracts to a subfolder, so we need to move the files up
-        $unzippedSubfolder = Join-Path -Path $toolsDir -ChildPath "$($aria2Version)-win-64bit-build1"
+        $unzippedSubfolder = Join-Path -Path $toolsDir -ChildPath "$($aria2VersionName)-win-64bit-build1"
         Get-ChildItem -Path $unzippedSubfolder | Move-Item -Destination $toolsDir
 
         # Clean up the empty subfolder and the zip file
@@ -59,7 +65,7 @@ if (-not (Test-Path -Path $aria2Path)) {
         Write-Host "----------------- ERROR -----------------" -ForegroundColor Red
         Write-Host "An error occurred during the automatic setup:" -ForegroundColor Red
         Write-Host $_.Exception.Message -ForegroundColor Red
-        Write-Host "Please try running the script again. If the issue persists, check your internet connection." -ForegroundColor Yellow
+        Write-Host "Please try running the script again. If the issue persists, check your internet connection or the download URL." -ForegroundColor Yellow
         Write-Host "-----------------------------------------" -ForegroundColor Red
         Write-Host ""
         Read-Host "Press Enter to exit."
