@@ -1,11 +1,12 @@
 # ==============================================================================
 # Universal PowerShell script with automatic prerequisite (aria2c) installation.
+# Version 2.0 - Fixed for one-liner execution.
 # ==============================================================================
 
 # --- Setup & Prerequisite Check ---
 
-# Define the local directory for our tools and the expected path for aria2c.exe
-$scriptRoot = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
+# Define the root directory based on the user's current location. This is more reliable for one-liners.
+$scriptRoot = Get-Location
 $toolsDir = Join-Path -Path $scriptRoot -ChildPath "tools"
 $aria2Path = Join-Path -Path $toolsDir -ChildPath "aria2c.exe"
 $aria2Version = "aria2-1.37.0" # Specify a known stable version
@@ -15,6 +16,7 @@ if (-not (Test-Path -Path $aria2Path)) {
     Write-Host "----------------- SETUP -----------------" -ForegroundColor Yellow
     Write-Host "aria2c not found. Attempting to download it for you."
     Write-Host "This is a one-time setup."
+    Write-Host "The 'tools' folder will be created here: $($scriptRoot)"
     Write-Host "-----------------------------------------"
     Write-Host ""
 
@@ -30,7 +32,7 @@ if (-not (Test-Path -Path $aria2Path)) {
 
         # Download the file
         Write-Host "Downloading aria2 from the official GitHub repository..." -ForegroundColor Green
-        Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath -Verbose
+        Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath
 
         # Unzip the file
         Write-Host "Extracting files..." -ForegroundColor Green
@@ -41,7 +43,7 @@ if (-not (Test-Path -Path $aria2Path)) {
         Get-ChildItem -Path $unzippedSubfolder | Move-Item -Destination $toolsDir
 
         # Clean up the empty subfolder and the zip file
-        Remove-Item -Path $unzippedSubfolder -Force
+        Remove-Item -Path $unzippedSubfolder -Force -Recurse
         Remove-Item -Path $zipPath -Force
 
         # Final check
@@ -106,5 +108,6 @@ Write-Host "Starting download with robust configuration for: $magnetLink"
 # Use the call operator '&' to execute the command from the path stored in the variable
 & $aria2Path --conf-path="$env:USERPROFILE\.aria2\aria2.conf" "$magnetLink"
 
+Write-Host ""
 Write-Host "Download process finished. Press Enter to exit."
 Read-Host
