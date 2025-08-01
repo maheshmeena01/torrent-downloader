@@ -11,8 +11,10 @@ This script requires no manual setup. Simply paste one command into PowerShell, 
 Open **PowerShell** (you can right-click the Start Menu and select "Terminal" or "PowerShell") and paste the following command:
 
 ```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-WebRequest -Uri https://raw.githubusercontent.com/maheh4125/torrent-downloader/main/aria2c_downloader.ps1 -UseBasicParsing | Invoke-Expression
+Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-WebRequest -Uri https://raw.githubusercontent.com/maheshmeena01/torrent-downloader/main/aria2c_downloader.ps1 -UseBasicParsing | Invoke-Expression
 ```
+
+---
 
 ### ✨ Features
 
