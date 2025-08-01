@@ -1,33 +1,51 @@
-# Aria2c Torrent Downloader Scripts
+# Aria2c Torrent Downloader 🚀
 
-This repository contains universal scripts for downloading torrents via magnet links using the command-line utility `aria2c`.
+A self-installing PowerShell utility to download torrents and magnet links using `aria2c`.
 
-The PowerShell script is fully self-contained and will automatically download the `aria2c` prerequisite on its first run.
+This script requires no manual setup. Simply paste one command into PowerShell, and it will automatically handle its own dependencies (`aria2c`) and prompt you for a magnet link.
 
-## Features
+---
 
-- **Automatic Setup (PowerShell):** No need to install anything! The PowerShell script will download `aria2c` for you into a local `tools` folder.
-- **Easy to Use:** Just run the script and follow the prompts.
-- **Optimized for Speed:** Creates a configuration file with an extensive tracker list to maximize peer connections.
-- **Cross-compatible:**
-    - `aria2c_downloader.ps1`: The recommended, self-installing version for modern Windows.
-    - `aria2c_downloader.bat`: A legacy Batch version (requires manual `aria2c` installation).
+## 🚀 Quick Launch (One-Liner)
 
-## How to Use
+Open **PowerShell** (you can right-click the Start Menu and select "Terminal" or "PowerShell") and paste the following command:
 
-### PowerShell (Recommended)
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-WebRequest -Uri https://raw.githubusercontent.com/maheh4125/torrent-downloader/main/aria2c_downloader.ps1 -UseBasicParsing | Invoke-Expression
+```
 
-1.  Download the `aria2c_downloader.ps1` script.
-2.  Right-click the file, go to **Properties**, and click the **Unblock** checkbox at the bottom. This is required to run scripts downloaded from the internet.
-3.  Open a PowerShell terminal, navigate to the folder where you saved the script.
-4.  Run the script: `.\aria2c_downloader.ps1`
-5.  The first time you run it, it will automatically download and set up `aria2c`. Subsequent runs will be instant.
-6.  Follow the on-screen prompts.
+### ✨ Features
 
-### Batch (Legacy)
+* **Zero Installation:** No need to manually install aria2c or configure the PATH. The script handles it automatically on the first launch.
+* **Easy to Use:** Simply run the one-liner and follow the prompts.
+* **Optimized for Speed:** The script creates an `aria2.conf` file on the fly, complete with an extensive and up-to-date tracker list to maximize peer connections.
+* **Self-Contained:** It downloads `aria2c` to a local `.\tools\` folder next to where the script is run, keeping your system clean.
 
-This version requires you to manually install `aria2c` and add it to your system's PATH.
+---
 
-1.  Download and install `aria2c` from the [official releases page](https://github.com/aria2/aria2/releases).
-2.  Ensure the folder containing `aria2c.exe` is added to your system's PATH environment variable.
-3.  Double-click `aria2c_downloader.bat` and follow the prompts.
+### 🚀 How It Works
+
+The one-liner command performs the following actions:
+
+1.  `Set-ExecutionPolicy Bypass -Scope Process -Force`: Temporarily allows the execution of scripts for the current PowerShell session for maximum compatibility.
+2.  `Invoke-WebRequest`: Downloads the raw code of the `aria2c_downloader.ps1` script from this GitHub repository.
+3.  `Invoke-Expression`: Executes the downloaded script code directly in memory.
+
+The script itself then checks if `aria2c.exe` exists in a local `.\tools\` folder. If not, it downloads the official aria2 release, unzips it, and places it there for future use.
+
+---
+
+### 💻 Manual / Local Usage
+
+If you prefer to download the script before running it:
+
+1.  Download the `aria2c_downloader.ps1` file from this repository.
+2.  Right-click the downloaded file, go to **Properties**, and check the **Unblock** box at the bottom.
+3.  Open a PowerShell terminal in the same folder where you saved the file.
+4.  Run the script with the command: `.\aria2c_downloader.ps1`
+
+---
+
+### ⚠️ Security
+
+Using **`Invoke-Expression`** from an internet source runs code on your system. This command downloads the script directly from this repository. Please review the code in `aria2c_downloader.ps1` if you have any security concerns.
