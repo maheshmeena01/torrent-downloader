@@ -1,6 +1,5 @@
 # ==============================================================================
 # Universal PowerShell script with automatic prerequisite (aria2c) installation.
-# Version 2.0 - Fixed for one-liner execution.
 # ==============================================================================
 
 # --- Setup & Prerequisite Check ---
