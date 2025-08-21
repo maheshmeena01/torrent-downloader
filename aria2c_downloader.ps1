@@ -1,13 +1,14 @@
 # ==============================================================================
 # Universal PowerShell script with a GUI for aria2c.
-# Version 4.0 - Rebuilt with a Windows Forms GUI for user-friendly operation.
+# Version 5.1 - Fixed a variable scope issue preventing downloads from starting.
 # ==============================================================================
 
 # --- Function to Handle Prerequisite (aria2c) Installation ---
 # This keeps the setup logic separate from the GUI logic.
 function Install-Aria2c {
     param(
-        [System.Windows.Forms.TextBox]$logBox
+        [System.Windows.Forms.TextBox]$logBox,
+        [Action[string]]$writeLogAction
     )
 
     $scriptRoot = $PSScriptRoot
@@ -22,12 +23,12 @@ function Install-Aria2c {
 
     # Check if aria2c.exe already exists.
     if (Test-Path -Path $aria2Path) {
-        $logBox.AppendText("✅ Aria2c prerequisite found locally.`r`n")
+        $writeLogAction.Invoke("Aria2c prerequisite found locally.")
         return $aria2Path
     }
 
-    $logBox.AppendText("----------------- SETUP -----------------`r`n")
-    $logBox.AppendText("aria2c not found. Attempting to download...`r`n")
+    $writeLogAction.Invoke("----------------- SETUP -----------------")
+    $writeLogAction.Invoke("aria2c not found. Attempting to download...")
     
     try {
         if (-not (Test-Path -Path $toolsDir)) {
@@ -37,10 +38,10 @@ function Install-Aria2c {
         $downloadUrl = "https://github.com/aria2/aria2/releases/download/release-$($aria2VersionNumber)/$($aria2AssetName)"
         $zipPath = Join-Path -Path $toolsDir -ChildPath "aria2.zip"
 
-        $logBox.AppendText("Downloading from: $downloadUrl`r`n")
+        $writeLogAction.Invoke("Downloading from: $downloadUrl")
         Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath
 
-        $logBox.AppendText("Extracting files...`r`n")
+        $writeLogAction.Invoke("Extracting files...")
         Expand-Archive -Path $zipPath -DestinationPath $toolsDir -Force
 
         $unzippedSubfolder = Join-Path -Path $toolsDir -ChildPath "$($aria2VersionName)-win-64bit-build1"
@@ -52,12 +53,12 @@ function Install-Aria2c {
             throw "Aria2c setup failed. Executable not found after extraction."
         }
 
-        $logBox.AppendText("✅ Aria2c has been successfully set up.`r`n")
-        $logBox.AppendText("----------------------------------------`r`n")
+        $writeLogAction.Invoke("✅ Aria2c has been successfully set up.")
+        $writeLogAction.Invoke("----------------------------------------")
         return $aria2Path
     }
     catch {
-        $logBox.AppendText("❌ ERROR: $($_.Exception.Message)`r`n")
+        $writeLogAction.Invoke("❌ ERROR: $($_.Exception.Message)")
         [System.Windows.Forms.MessageBox]::Show("An error occurred during setup: $($_.Exception.Message)", "Error", "OK", "Error")
         return $null
     }
@@ -70,153 +71,223 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # Create the main form (window)
-$main_form = New-Object System.Windows.Forms.Form
-$main_form.Text = "Aria2c Downloader GUI"
-$main_form.Size = New-Object System.Drawing.Size(550, 520)
-$main_form.StartPosition = "CenterScreen"
-$main_form.FormBorderStyle = 'FixedSingle'
-$main_form.MaximizeBox = $false
+$form = New-Object System.Windows.Forms.Form
+$form.Text = "Aria2c Downloader 5.1"
+$form.Size = New-Object System.Drawing.Size(600, 620)
+$form.StartPosition = "CenterScreen"
+$form.FormBorderStyle = 'FixedSingle'
+$form.MaximizeBox = $false
+$form.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+$form.BackColor = [System.Drawing.Color]::FromArgb(240, 240, 240)
 
 # --- Create GUI Elements ---
+$margin = 15
 
-# 1. Download Name
-$label_name = New-Object System.Windows.Forms.Label
-$label_name.Location = New-Object System.Drawing.Point(20, 20)
-$label_name.Size = New-Object System.Drawing.Size(200, 20)
-$label_name.Text = "Download Name (for folder):"
-$main_form.Controls.Add($label_name)
+# --- Group 1: Download Details ---
+$groupDetails = New-Object System.Windows.Forms.GroupBox
+$groupDetails.Location = New-Object System.Drawing.Point($margin, $margin)
+$groupDetails.Size = New-Object System.Drawing.Size(555, 190)
+$groupDetails.Text = "Download Details"
+$form.Controls.Add($groupDetails)
 
-$txt_name = New-Object System.Windows.Forms.TextBox
-$txt_name.Location = New-Object System.Drawing.Point(20, 45)
-$txt_name.Size = New-Object System.Drawing.Size(490, 20)
-$txt_name.Text = "My_Download"
-$main_form.Controls.Add($txt_name)
+# 1.1 Download Name
+$labelName = New-Object System.Windows.Forms.Label
+$labelName.Location = New-Object System.Drawing.Point($margin, 30)
+$labelName.Size = New-Object System.Drawing.Size(200, 20)
+$labelName.Text = "Download Name (used for subfolder):"
+$groupDetails.Controls.Add($labelName)
 
-# 2. Download Type
-$label_type = New-Object System.Windows.Forms.Label
-$label_type.Location = New-Object System.Drawing.Point(20, 85)
-$label_type.Size = New-Object System.Drawing.Size(120, 20)
-$label_type.Text = "Download Type:"
-$main_form.Controls.Add($label_type)
+$textName = New-Object System.Windows.Forms.TextBox
+$textName.Location = New-Object System.Drawing.Point($margin, 55)
+$textName.Size = New-Object System.Drawing.Size(525, 20)
+$textName.Text = "My_Download"
+$groupDetails.Controls.Add($textName)
 
-$combo_type = New-Object System.Windows.Forms.ComboBox
-$combo_type.Location = New-Object System.Drawing.Point(20, 110)
-$combo_type.Size = New-Object System.Drawing.Size(150, 20)
-$combo_type.DropDownStyle = "DropDownList" # Prevents user from typing custom text
-$combo_type.Items.AddRange(@("URL / Magnet", "Torrent File"))
-$combo_type.SelectedIndex = 0
-$main_form.Controls.Add($combo_type)
+# 1.2 Download Type
+$labelType = New-Object System.Windows.Forms.Label
+$labelType.Location = New-Object System.Drawing.Point($margin, 95)
+$labelType.Size = New-Object System.Drawing.Size(120, 20)
+$labelType.Text = "Download Type:"
+$groupDetails.Controls.Add($labelType)
 
-# 3. Download Source (URL, Magnet, or File Path)
-$label_source = New-Object System.Windows.Forms.Label
-$label_source.Location = New-Object System.Drawing.Point(20, 150)
-$label_source.Size = New-Object System.Drawing.Size(300, 20)
-$label_source.Text = "Source (URL, Magnet Link, or Torrent File Path):"
-$main_form.Controls.Add($label_source)
+$comboType = New-Object System.Windows.Forms.ComboBox
+$comboType.Location = New-Object System.Drawing.Point($margin, 120)
+$comboType.Size = New-Object System.Drawing.Size(150, 20)
+$comboType.DropDownStyle = "DropDownList"
+$comboType.Items.AddRange(@("URL / Magnet", "Torrent File"))
+$comboType.SelectedIndex = 0
+$groupDetails.Controls.Add($comboType)
 
-$txt_source = New-Object System.Windows.Forms.TextBox
-$txt_source.Location = New-Object System.Drawing.Point(20, 175)
-$txt_source.Size = New-Object System.Drawing.Size(380, 20)
-$main_form.Controls.Add($txt_source)
+# 1.3 Download Source
+$labelSource = New-Object System.Windows.Forms.Label
+$labelSource.Location = New-Object System.Drawing.Point(180, 95)
+$labelSource.Size = New-Object System.Drawing.Size(350, 20)
+$labelSource.Text = "Source (URL, Magnet Link, or Torrent File Path):"
+$groupDetails.Controls.Add($labelSource)
 
-$btn_browse = New-Object System.Windows.Forms.Button
-$btn_browse.Location = New-Object System.Drawing.Point(410, 174)
-$btn_browse.Size = New-Object System.Drawing.Size(100, 23)
-$btn_browse.Text = "Browse..."
-$btn_browse.Enabled = $false # Disabled by default
-$main_form.Controls.Add($btn_browse)
+$textSource = New-Object System.Windows.Forms.TextBox
+$textSource.Location = New-Object System.Drawing.Point(180, 120)
+$textSource.Size = New-Object System.Drawing.Size(255, 20)
+$groupDetails.Controls.Add($textSource)
 
-# 4. Speed Limit
-$label_speed = New-Object System.Windows.Forms.Label
-$label_speed.Location = New-Object System.Drawing.Point(20, 215)
-$label_speed.Size = New-Object System.Drawing.Size(300, 20)
-$label_speed.Text = "Speed Limit (e.g., 5M or 500K). Leave blank for unlimited:"
-$main_form.Controls.Add($label_speed)
+$btnBrowseSource = New-Object System.Windows.Forms.Button
+$btnBrowseSource.Location = New-Object System.Drawing.Point(445, 119)
+$btnBrowseSource.Size = New-Object System.Drawing.Size(95, 23)
+$btnBrowseSource.Text = "Browse..."
+$btnBrowseSource.Enabled = $false # Disabled by default
+$groupDetails.Controls.Add($btnBrowseSource)
 
-$txt_speed = New-Object System.Windows.Forms.TextBox
-$txt_speed.Location = New-Object System.Drawing.Point(20, 240)
-$txt_speed.Size = New-Object System.Drawing.Size(150, 20)
-$main_form.Controls.Add($txt_speed)
+# --- Group 2: Configuration ---
+$groupConfig = New-Object System.Windows.Forms.GroupBox
+$groupConfig.Location = New-Object System.Drawing.Point($margin, 220)
+$groupConfig.Size = New-Object System.Drawing.Size(555, 150)
+$groupConfig.Text = "Configuration"
+$form.Controls.Add($groupConfig)
 
-# 5. Status Log Box
-$log_box = New-Object System.Windows.Forms.TextBox
-$log_box.Location = New-Object System.Drawing.Point(20, 340)
-$log_box.Size = New-Object System.Drawing.Size(490, 120)
-$log_box.Multiline = $true
-$log_box.ScrollBars = "Vertical"
-$log_box.ReadOnly = $true
-$main_form.Controls.Add($log_box)
+# 2.1 Download Path
+$labelPath = New-Object System.Windows.Forms.Label
+$labelPath.Location = New-Object System.Drawing.Point($margin, 30)
+$labelPath.Size = New-Object System.Drawing.Size(200, 20)
+$labelPath.Text = "Download Location (Base Folder):"
+$groupConfig.Controls.Add($labelPath)
 
-# 6. Start Download Button
-$btn_start = New-Object System.Windows.Forms.Button
-$btn_start.Location = New-Object System.Drawing.Point(20, 280)
-$btn_start.Size = New-Object System.Drawing.Size(490, 40)
-$btn_start.Text = "Start Download"
-$btn_start.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-$btn_start.BackColor = [System.Drawing.Color]::PaleGreen
-$main_form.Controls.Add($btn_start)
+$textPath = New-Object System.Windows.Forms.TextBox
+$textPath.Location = New-Object System.Drawing.Point($margin, 55)
+$textPath.Size = New-Object System.Drawing.Size(415, 20)
+$textPath.Text = "$env:USERPROFILE\Downloads"
+$groupConfig.Controls.Add($textPath)
+
+$btnBrowsePath = New-Object System.Windows.Forms.Button
+$btnBrowsePath.Location = New-Object System.Drawing.Point(445, 54)
+$btnBrowsePath.Size = New-Object System.Drawing.Size(95, 23)
+$btnBrowsePath.Text = "Browse..."
+$groupConfig.Controls.Add($btnBrowsePath)
+
+# 2.2 Speed Limit
+$labelSpeed = New-Object System.Windows.Forms.Label
+$labelSpeed.Location = New-Object System.Drawing.Point($margin, 95)
+$labelSpeed.Size = New-Object System.Drawing.Size(350, 20)
+$labelSpeed.Text = "Speed Limit (e.g., 5M or 500K). Blank = unlimited:"
+$groupConfig.Controls.Add($labelSpeed)
+
+$textSpeed = New-Object System.Windows.Forms.TextBox
+$textSpeed.Location = New-Object System.Drawing.Point($margin, 115)
+$textSpeed.Size = New-Object System.Drawing.Size(150, 20)
+$groupConfig.Controls.Add($textSpeed)
+
+# --- Start Button ---
+$btnStart = New-Object System.Windows.Forms.Button
+$btnStart.Location = New-Object System.Drawing.Point($margin, 385)
+$btnStart.Size = New-Object System.Drawing.Size(555, 45)
+$btnStart.Text = "Start Download"
+$btnStart.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+$btnStart.BackColor = [System.Drawing.Color]::FromArgb(40, 167, 69)
+$btnStart.ForeColor = [System.Drawing.Color]::White
+$form.Controls.Add($btnStart)
+
+# --- Status Log Box ---
+$logBox = New-Object System.Windows.Forms.TextBox
+$logBox.Location = New-Object System.Drawing.Point($margin, 445)
+$logBox.Size = New-Object System.Drawing.Size(555, 110)
+$logBox.Multiline = $true
+$logBox.ScrollBars = "Vertical"
+$logBox.ReadOnly = $true
+$logBox.Font = New-Object System.Drawing.Font("Consolas", 9)
+$form.Controls.Add($logBox)
+
 
 # --- GUI Event Handlers (The Logic) ---
 
+# Global variable to hold the path to the executable
+$script:aria2Path = $null
+
+# Helper function for logging
+function Write-Log {
+    param($message)
+    $timestamp = Get-Date -Format "HH:mm:ss"
+    $logBox.AppendText("[$timestamp] $message`r`n")
+}
+
+# Event: When the form first loads
+$form.Add_Load({
+    Write-Log "Welcome! Initializing downloader..."
+    # FIX: Use $script: scope to modify the script-level variable
+    $script:aria2Path = Install-Aria2c -logBox $logBox -writeLogAction ${function:Write-Log}
+})
+
 # Event: When the user changes the download type
-$combo_type.add_SelectedIndexChanged({
-    if ($combo_type.SelectedItem -eq "Torrent File") {
-        $btn_browse.Enabled = $true
+$comboType.add_SelectedIndexChanged({
+    if ($comboType.SelectedItem -eq "Torrent File") {
+        $btnBrowseSource.Enabled = $true
     } else {
-        $btn_browse.Enabled = $false
+        $btnBrowseSource.Enabled = $false
     }
 })
 
-# Event: When the user clicks the "Browse..." button
-$btn_browse.add_Click({
-    $open_dialog = New-Object System.Windows.Forms.OpenFileDialog
-    $open_dialog.Title = "Select a torrent file"
-    $open_dialog.Filter = "Torrent Files (*.torrent)|*.torrent"
-    if ($open_dialog.ShowDialog() -eq "OK") {
-        $txt_source.Text = $open_dialog.FileName
+# Event: When the user clicks the "Browse..." button for the source torrent
+$btnBrowseSource.add_Click({
+    $openDialog = New-Object System.Windows.Forms.OpenFileDialog
+    $openDialog.Title = "Select a torrent file"
+    $openDialog.Filter = "Torrent Files (*.torrent)|*.torrent"
+    if ($openDialog.ShowDialog() -eq "OK") {
+        $textSource.Text = $openDialog.FileName
+    }
+})
+
+# Event: When the user clicks the "Browse..." button for the download path
+$btnBrowsePath.add_Click({
+    $folderDialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $folderDialog.Description = "Select a base directory for downloads"
+    $folderDialog.SelectedPath = $textPath.Text
+    if ($folderDialog.ShowDialog() -eq "OK") {
+        $textPath.Text = $folderDialog.SelectedPath
     }
 })
 
 # Event: When the user clicks "Start Download"
-$btn_start.add_Click({
+$btnStart.add_Click({
     # Disable button to prevent multi-clicking
-    $btn_start.Enabled = $false
-    $log_box.AppendText("`r`n") # Add a separator
+    $btnStart.Enabled = $false
+    $logBox.AppendText("`r`n") # Add a separator
 
     # --- 1. Validation ---
-    if ([string]::IsNullOrWhiteSpace($txt_name.Text) -or [string]::IsNullOrWhiteSpace($txt_source.Text)) {
-        [System.Windows.Forms.MessageBox]::Show("Download Name and Source cannot be empty.", "Validation Error", "OK", "Warning")
-        $btn_start.Enabled = $true
+    if ([string]::IsNullOrWhiteSpace($textName.Text) -or [string]::IsNullOrWhiteSpace($textSource.Text) -or [string]::IsNullOrWhiteSpace($textPath.Text)) {
+        [System.Windows.Forms.MessageBox]::Show("Download Name, Source, and Path cannot be empty.", "Validation Error", "OK", "Warning")
+        $btnStart.Enabled = $true
         return
     }
 
     # --- 2. Prerequisite Check ---
-    $aria2Path = Install-Aria2c -logBox $log_box
-    if (-not $aria2Path) {
-        $log_box.AppendText("❌ Cannot proceed without aria2c.exe.`r`n")
-        $btn_start.Enabled = $true
+    if (-not $script:aria2Path) {
+        Write-Log "❌ Cannot proceed without aria2c.exe. Check for errors above."
+        $btnStart.Enabled = $true
         return
     }
 
     # --- 3. Prepare Download ---
-    $downloadName = $txt_name.Text
-    $downloadSource = $txt_source.Text
-    $speedLimit = $txt_speed.Text
+    $downloadName = $textName.Text
+    $downloadSource = $textSource.Text
+    $speedLimit = $textSpeed.Text
     
-    $sanitizedDownloadName = $downloadName -replace '[^a-zA-Z0-9_\-]', '_'
-    $downloadDirectory = "$env:USERPROFILE\Downloads\$sanitizedDownloadName"
+    $sanitizedDownloadName = $downloadName -replace '[^a-zA-Z0-9_\-.]', '_'
+    $downloadDirectory = Join-Path -Path $textPath.Text -ChildPath $sanitizedDownloadName
     
-    $aria2ConfigDir = "$env:USERPROFILE\.aria2"
-    New-Item -ItemType Directory -Path $aria2ConfigDir -Force -ErrorAction SilentlyContinue | Out-Null
-    New-Item -ItemType Directory -Path $downloadDirectory -Force -ErrorAction SilentlyContinue| Out-Null
-    
-    $log_box.AppendText("Download directory: $downloadDirectory`r`n")
+    try {
+        if (-not (Test-Path -Path $downloadDirectory)) {
+            New-Item -ItemType Directory -Path $downloadDirectory -Force | Out-Null
+        }
+        Write-Log "Download directory: $downloadDirectory"
+    } catch {
+        Write-Log "❌ ERROR: Could not create download directory. Check permissions."
+        $btnStart.Enabled = $true
+        return
+    }
 
     # --- 4. Build aria2c command arguments ---
     $aria2Args = @(
         "--dir=`"$downloadDirectory`"",
         "--seed-time=0",
-        "--bt-tracker=udp://tracker.opentrackr.org:1337/announce,udp://open.demonii.com:1337/announce,udp://tracker.openbittorrent.com:6969/announce,udp://tracker.coppersurfer.tk:6969/announce",
+        "--bt-tracker=udp://tracker.opentrackr.org:1337/announce,udp://open.demonii.com:1337/announce,udp://tracker.openbittrent.com:6969/announce,udp://tracker.coppersurfer.tk:6969/announce",
         "`"$downloadSource`""
     )
     if (-not [string]::IsNullOrWhiteSpace($speedLimit)) {
@@ -224,19 +295,18 @@ $btn_start.add_Click({
     }
 
     # --- 5. Launch Download ---
-    $log_box.AppendText("🚀 Starting download in a new window...`r`n")
+    Write-Log "🚀 Starting download in a new window..."
     
     # Start aria2c in a new console window so the GUI doesn't freeze.
-    # The user can see the progress there.
-    Start-Process -FilePath $aria2Path -ArgumentList $aria2Args
+    Start-Process -FilePath $script:aria2Path -ArgumentList $aria2Args
     
-    $log_box.AppendText("✅ Download process initiated.`r`n")
+    Write-Log "✅ Download process initiated successfully."
     
     # Re-enable the button for the next download
-    $btn_start.Enabled = $true
+    $btnStart.Enabled = $true
 })
 
 
 # --- Show the GUI ---
 # This line must be at the end. It displays the form and waits for it to be closed.
-$main_form.ShowDialog() | Out-Null
+$form.ShowDialog() | Out-Null
