@@ -1,12 +1,38 @@
-# Aria2c Torrent Downloader 🚀
+# PowerShell Aria2c Downloader
 
-A self-installing PowerShell utility to download torrents and magnet links using `aria2c`.
+![Version 10.3](https://img.shields.io/badge/version-10.3-blue.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-This script requires no manual setup. Simply paste one command into PowerShell, and it will automatically handle its own dependencies (`aria2c`) and prompt you for a magnet link.
+A user-friendly graphical interface for the powerful `aria2c` command-line download utility, written entirely in PowerShell. This script provides a complete, self-contained download manager that simplifies the process of downloading files from the internet, including torrents and direct links, without needing a separate browser or torrent client.
 
 ---
 
-## 🚀 Quick Launch (One-Liner)
+## Features
+
+This application has been developed to be a feature-rich and easy-to-use download manager.
+
+* **Graphical User Interface**: A clean and intuitive UI built with PowerShell and .NET WinForms.
+* **Automatic Setup**: Automatically downloads and sets up the `aria2c.exe` prerequisite if it's not found.
+* **Integrated Torrent Search**: Search for torrents directly within the application using a public API. Results include file size, category, and seed/leech counts.
+* **Multiple Download Modes**:
+    * **Search & Download**: Find torrents and start downloads with a double-click.
+    * **Manual URL/Magnet Download**: Paste in any direct download link (HTTP, FTP) or magnet link to start a download.
+* **Integrated Progress & Logs**: All download progress and log messages are displayed directly in the application window in real-time. **No separate pop-up console windows.**
+* **Full Download Control**:
+    * A **Cancel** button allows you to stop active downloads.
+    * Set custom download speed limits.
+* **Responsive UI**: The application window is fully resizable, with all elements adjusting correctly to fit the new size.
+
+---
+
+## Requirements
+
+* **Operating System**: Windows 10 or Windows 11
+* **PowerShell**: Version 5.1 or later (this is included by default in modern Windows versions).
+
+---
+
+## How to Use
 
 Open **PowerShell** (you can right-click the Start Menu and select "Terminal" or "PowerShell") and paste the following command:
 
@@ -14,40 +40,23 @@ Open **PowerShell** (you can right-click the Start Menu and select "Terminal" or
 Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-WebRequest -Uri https://raw.githubusercontent.com/maheshmeena01/torrent-downloader/main/aria2c_downloader.ps1 -UseBasicParsing | Invoke-Expression
 ```
 
----
-
-### ✨ Features
-
-* **Zero Installation:** No need to manually install aria2c or configure the PATH. The script handles it automatically on the first launch.
-* **Easy to Use:** Simply run the one-liner and follow the prompts.
-* **Optimized for Speed:** The script creates an `aria2.conf` file on the fly, complete with an extensive and up-to-date tracker list to maximize peer connections.
-* **Self-Contained:** It downloads `aria2c` to a local `.\tools\` folder next to where the script is run, keeping your system clean.
+The application window should now appear, and you can start downloading.
 
 ---
 
-### 🚀 How It Works
+## Troubleshooting
 
-The one-liner command performs the following actions:
+* **"Script cannot be loaded because running scripts is disabled on this system."**: This is the most common issue. Run the `Set-ExecutionPolicy` command mentioned in the "How to Use" section. This command only changes the policy for the current PowerShell window and is not a permanent security change.
 
-1.  `Set-ExecutionPolicy Bypass -Scope Process -Force`: Temporarily allows the execution of scripts for the current PowerShell session for maximum compatibility.
-2.  `Invoke-WebRequest`: Downloads the raw code of the `aria2c_downloader.ps1` script from this GitHub repository.
-3.  `Invoke-Expression`: Executes the downloaded script code directly in memory.
-
-The script itself then checks if `aria2c.exe` exists in a local `.\tools\` folder. If not, it downloads the official aria2 release, unzips it, and places it there for future use.
+* **Search Returns No Results**: The script relies on a free, public API (`apibay.org`) for torrent searches. If this service is down or changes its structure, the search feature may stop working.
 
 ---
 
-### 💻 Manual / Local Usage
+## License
 
-If you prefer to download the script before running it:
+This project is licensed under the MIT License. See the `LICENSE` file for details.
 
-1.  Download the `aria2c_downloader.ps1` file from this repository.
-2.  Right-click the downloaded file, go to **Properties**, and check the **Unblock** box at the bottom.
-3.  Open a PowerShell terminal in the same folder where you saved the file.
-4.  Run the script with the command: `.\aria2c_downloader.ps1`
+## Acknowledgments
 
----
-
-### ⚠️ Security
-
-Using **`Invoke-Expression`** from an internet source runs code on your system. This command downloads the script directly from this repository. Please review the code in `aria2c_downloader.ps1` if you have any security concerns.
+* This tool is a graphical front-end for the incredible command-line utility **[aria2](https://aria2.github.io/)**.
+* Torrent search functionality is powered by the public API at **apibay.org**.
