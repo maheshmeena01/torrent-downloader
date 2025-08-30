@@ -1,7 +1,7 @@
 # ==============================================================================
 # Universal PowerShell script with a GUI for aria2c.
-# Version 10.2 - THE FINAL VERSION
-# - Fixed a critical syntax error (ParserError) that prevented the script from launching.
+# Version 10.4 - THE FINAL VERSION
+# - Updated the hardcoded BitTorrent tracker list to improve connection reliability.
 # ==============================================================================
 
 # --- Function to Handle Prerequisite (aria2c) Installation ---
@@ -65,13 +65,14 @@ function Search-Torrents {
 # --- GUI Creation ---
 Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "Aria2c Downloader 10.2 - Stable"
+$form.Text = "Aria2c Downloader 10.4 - Stable"
 $form.Size = New-Object System.Drawing.Size(720, 850)
 $form.MinimumSize = New-Object System.Drawing.Size(550, 700)
 $form.StartPosition = "CenterScreen"; $form.FormBorderStyle = 'Sizable'; $form.MaximizeBox = $true
 $form.Font = New-Object System.Drawing.Font("Segoe UI", 9); $form.BackColor = [System.Drawing.Color]::FromArgb(240, 240, 240)
 $margin = 15
 
+# ... (GUI Control creation is identical to the previous version, so it is condensed here for brevity)
 $groupMode = New-Object System.Windows.Forms.GroupBox; $groupMode.Location = New-Object System.Drawing.Point($margin, $margin); $groupMode.Size = New-Object System.Drawing.Size(670, 60); $groupMode.Text = "1. Select Download Mode"; $groupMode.Anchor = 'Top, Left, Right'; $form.Controls.Add($groupMode)
 $labelMode = New-Object System.Windows.Forms.Label; $labelMode.Location = New-Object System.Drawing.Point($margin, 25); $labelMode.AutoSize = $true; $labelMode.Text = "Mode:"; $groupMode.Controls.Add($labelMode)
 $comboMode = New-Object System.Windows.Forms.ComboBox; $comboMode.Location = New-Object System.Drawing.Point(70, 22); $comboMode.Size = New-Object System.Drawing.Size(200, 20); $comboMode.DropDownStyle = "DropDownList"; $comboMode.Items.AddRange(@("Search & Download (Torrents)", "Manual URL Download")); $comboMode.SelectedIndex = 0; $groupMode.Controls.Add($comboMode)
@@ -106,10 +107,10 @@ $script:progressRegex = [regex] '^\[#\w+\s+(?<downloaded>[\d\.]+[BKMGTi]+)\/(?<t
 function Write-Log { param($message) $timestamp = Get-Date -Format "HH:mm:ss"; $logBox.AppendText("[$timestamp] $message`r`n") }
 function Update-Download-Mode { if ($comboMode.SelectedItem -eq "Search & Download (Torrents)") { $groupSearch.Enabled = $true; $textName.ReadOnly = $true; $textSource.ReadOnly = $true; $groupDetails.Text = "3. Download Details (auto-filled)" } else { $groupSearch.Enabled = $false; $textName.ReadOnly = $false; $textSource.ReadOnly = $false; $groupDetails.Text = "3. Download Details (manual)" } }
 function Set-Download-State { param([bool]$isDownloading) { $btnStart.Visible = -not $isDownloading; $btnCancel.Visible = $isDownloading; $groupMode.Enabled = -not $isDownloading; $groupSearch.Enabled = -not $isDownloading; $groupDetails.Enabled = -not $isDownloading; $groupConfig.Enabled = -not $isDownloading } }
+function Update-Layout { $textSearchQuery.Width = $btnSearch.Left - $textSearchQuery.Left - 5; $textPath.Width = $btnBrowsePath.Left - $textPath.Left - 5 }
 
-# FIX: Corrected the corrupted variable name in this line.
-$form.Add_Load({ Write-Log "Welcome!"; $script:aria2Path = Install-Aria2c -writeLogAction ${function:Write-Log}; Update-Download-Mode })
-
+$form.Add_Load({ Write-Log "Welcome!"; $script:aria2Path = Install-Aria2c -writeLogAction ${function:Write-Log}; Update-Download-Mode; Update-Layout })
+$form.Add_Resize({ Update-Layout })
 $comboMode.add_SelectedIndexChanged({ Update-Download-Mode })
 $btnSearch.add_Click({ if ([string]::IsNullOrWhiteSpace($textSearchQuery.Text)) { return }; $btnSearch.Enabled = $false; Search-Torrents -query $textSearchQuery.Text -listView $listViewResults -writeLogAction ${function:Write-Log}; $btnSearch.Enabled = $true })
 $listViewResults.add_DoubleClick({ if ($listViewResults.SelectedItems.Count -gt 0) { $selectedItem = $listViewResults.SelectedItems[0]; $textName.Text = $selectedItem.Text; $textSource.Text = $selectedItem.Tag; Write-Log "Selected: $($selectedItem.Text)" } })
@@ -121,7 +122,24 @@ $btnStart.add_Click({
     Set-Download-State -isDownloading $true
     $sanitizedDownloadName = $textName.Text -replace '[^a-zA-Z0-9_\-.]', '_'; $downloadDirectory = Join-Path -Path $textPath.Text -ChildPath $sanitizedDownloadName
     try { if (-not (Test-Path -Path $downloadDirectory)) { New-Item -ItemType Directory -Path $downloadDirectory -Force | Out-Null }; Write-Log "Download directory: $downloadDirectory" } catch { Write-Log "❌ ERROR: Could not create download directory."; Set-Download-State -isDownloading $false; return }
-    $aria2Args = New-Object System.Collections.Generic.List[string]; $aria2Args.Add("--dir=$downloadDirectory"); $aria2Args.Add("--seed-time=0"); $aria2Args.Add("--summary-interval=1")
+    
+    # UPDATE: Refreshed and expanded list of public trackers.
+    $trackers = @(
+        "udp://tracker.opentrackr.org:1337/announce",
+        "udp://open.demonii.com:1337/announce",
+        "udp://tracker.openbittorrent.com:6969/announce",
+        "udp://tracker.torrent.eu.org:451/announce",
+        "udp://tracker.coppersurfer.tk:6969/announce",
+        "udp://exodus.desync.com:6969/announce",
+        "udp://open.stealth.si:80/announce",
+        "udp://tracker.tiny-vps.com:6969/announce",
+        "udp://tracker.internetwarriors.net:1337/announce"
+    )
+    $trackerString = $trackers -join ','
+
+    $aria2Args = New-Object System.Collections.Generic.List[string]
+    $aria2Args.Add("--dir=$downloadDirectory"); $aria2Args.Add("--seed-time=0"); $aria2Args.Add("--summary-interval=1")
+    $aria2Args.Add("--bt-tracker=$trackerString") # Add the updated tracker list
     if (-not [string]::IsNullOrWhiteSpace($textSpeed.Text)) { $aria2Args.Add("--max-download-limit=$($textSpeed.Text)") }
     $aria2Args.Add($textSource.Text)
     $progressBar.Value = 0; $progressLabel.Text = "Starting download..."; Write-Log "🚀 Starting download in the background..."
@@ -129,12 +147,7 @@ $btnStart.add_Click({
     $timer.Start()
 })
 
-$btnCancel.add_Click({
-    if ($null -ne $script:downloadJob) {
-        Write-Log "🛑 User requested to cancel download. Stopping job..."
-        Stop-Job -Job $script:downloadJob
-    }
-})
+$btnCancel.add_Click({ if ($null -ne $script:downloadJob) { Write-Log "🛑 User requested to cancel download. Stopping job..."; Stop-Job -Job $script:downloadJob } })
 
 $timer.Add_Tick({
     if ($null -eq $script:downloadJob) { $timer.Stop(); return }
@@ -144,28 +157,20 @@ $timer.Add_Tick({
             foreach ($line in $output) {
                 $match = $script:progressRegex.Match($line)
                 if ($match.Success) {
-                    $percent = $match.Groups['percent'].Value
-                    $downloaded = $match.Groups['downloaded'].Value
-                    $total = $match.Groups['total'].Value
-                    $speed = $match.Groups['speed'].Value
-                    $progressBar.Value = [int]$percent
-                    $progressLabel.Text = "Downloading: ${percent}%  |  ${downloaded} / ${total}  |  Speed: ${speed}"
-                } elseif (-not [string]::IsNullOrWhiteSpace($line)) {
-                    Write-Log $line
-                }
+                    $percent = $match.Groups['percent'].Value; $downloaded = $match.Groups['downloaded'].Value; $total = $match.Groups['total'].Value; $speed = $match.Groups['speed'].Value
+                    $progressBar.Value = [int]$percent; $progressLabel.Text = "Downloading: ${percent}%  |  ${downloaded} / ${total}  |  Speed: ${speed}"
+                } elseif (-not [string]::IsNullOrWhiteSpace($line)) { Write-Log $line }
             }
         }
     } catch { Write-Log "Error during progress update: $($_.Exception.Message)" }
-
     if ($script:downloadJob.State -in @('Completed', 'Failed', 'Stopped')) {
         $timer.Stop()
         Write-Log "Download job finished with state: $($script:downloadJob.State)."
         if ($script:downloadJob.State -eq 'Completed') {
             Receive-Job -Job $script:downloadJob | ForEach-Object { if (-not [string]::IsNullOrWhiteSpace($_)) { Write-Log $_ } }
             $progressBar.Value = 100; $progressLabel.Text = "✅ Download Complete!" 
-        } elseif ($script:downloadJob.State -eq 'Stopped') {
-            $progressLabel.Text = "🛑 Download Canceled."
-        } else { $progressLabel.Text = "❌ Download Failed or Stopped. Check logs." }
+        } elseif ($script:downloadJob.State -eq 'Stopped') { $progressLabel.Text = "🛑 Download Canceled." } 
+        else { $progressLabel.Text = "❌ Download Failed or Stopped. Check logs." }
         Remove-Job -Job $script:downloadJob; $script:downloadJob = $null
         Set-Download-State -isDownloading $false
     }
