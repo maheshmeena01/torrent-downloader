@@ -37,7 +37,8 @@ This application has been developed to be a feature-rich and easy-to-use downloa
 Open **PowerShell** (you can right-click the Start Menu and select "Terminal" or "PowerShell") and paste the following command:
 
 ```powershell
-cd ~\Downloads; Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-WebRequest -Uri https://raw.githubusercontent.com/maheshmeena01/torrent-downloader/main/aria2c_downloader.ps1 -UseBasicParsing | Invoke-Expression```
+cd ~\Downloads; Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-WebRequest -Uri https://raw.githubusercontent.com/maheshmeena01/torrent-downloader/main/aria2c_downloader.ps1 -UseBasicParsing | Invoke-Expression
+```
 The application window should now appear, and you can start downloading.
 
 ---
